@@ -8,7 +8,6 @@ import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
-// Setup default marker icons
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: markerIcon2x,
@@ -16,7 +15,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 
-const API_URL = 'http://localhost:5000/api/pois';
+const API_URL = 'http://10.10.6.251:5000/api/pois';
 
 function LocationMarker({ onMapClick }) {
   useMapEvents({
@@ -30,9 +29,10 @@ function LocationMarker({ onMapClick }) {
 function App() {
   const [pois, setPois] = useState([]);
   const [form, setForm] = useState({ name: '', description: '', lat: '', lng: '' });
-  const [message, setMessage] = useState([]);
+  const [message, setMessage] = useState('');
+  const [editingId, setEditingId] = useState(null);
 
-  // Load POIs from server
+  // Load POIs
   useEffect(() => {
     fetch(API_URL)
       .then(res => res.json())
@@ -43,7 +43,7 @@ function App() {
       });
   }, []);
 
-  // Auto-clear messages after 4 seconds
+  // Auto-clear messages
   useEffect(() => {
     if (message) {
       const timer = setTimeout(() => setMessage(''), 4000);
@@ -51,18 +51,24 @@ function App() {
     }
   }, [message]);
 
-  // Handle map click to set lat/lng
   const handleMapClick = (latlng) => {
     setForm({ ...form, lat: latlng.lat, lng: latlng.lng });
   };
 
-  // Submit POI
   const handleSubmit = (e) => {
     e.preventDefault();
-    fetch(API_URL, {
-      method: 'POST',
+    const method = editingId ? 'PUT' : 'POST';
+    const url = editingId ? `${API_URL}/${editingId}` : API_URL;
+
+    fetch(url, {
+      method,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form)
+      body: JSON.stringify({
+        name: form.name,
+        description: form.description,
+        lat: parseFloat(form.lat),
+        lng: parseFloat(form.lng)
+      })
     })
       .then(res => {
         if (!res.ok) throw new Error('Failed to save POI');
@@ -70,7 +76,8 @@ function App() {
       })
       .then(() => {
         setForm({ name: '', description: '', lat: '', lng: '' });
-        setMessage('✅ POI saved successfully!');
+        setEditingId(null);
+        setMessage(`✅ POI ${method === 'POST' ? 'created' : 'updated'} successfully!`);
         return fetch(API_URL).then(res => res.json()).then(setPois);
       })
       .catch(err => {
@@ -79,7 +86,27 @@ function App() {
       });
   };
 
-  // Delete POI
+  const handleEdit = (id) => {
+    fetch(`${API_URL}/${id}`)
+      .then(res => {
+        if (!res.ok) throw new Error(`POI with ID ${id} not found`);
+        return res.json();
+      })
+      .then(data => {
+        setForm({
+          name: data.name,
+          description: data.description,
+          lat: data.lat,
+          lng: data.lng
+        });
+        setEditingId(id);
+      })
+      .catch(err => {
+        console.error('Edit fetch error:', err);
+        setMessage('❌ Failed to load POI for editing');
+      });
+  };
+
   const handleDelete = (id) => {
     fetch(`${API_URL}/${id}`, { method: 'DELETE' })
       .then(res => {
@@ -116,13 +143,16 @@ function App() {
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
           <LocationMarker onMapClick={handleMapClick} />
           {pois.map(poi => (
-            <Marker key={poi.id} position={[poi.lat, poi.lng]} />
+            <Marker
+              key={poi.id}
+              position={[parseFloat(poi.lat), parseFloat(poi.lng)]}
+            />
           ))}
         </MapContainer>
       </div>
 
-      <div style={{ width: '30%', padding: '20px' }}>
-        <h3>Add POI</h3>
+      <div style={{ width: '40%', padding: '20px' }}>
+        <h3>{editingId ? 'Edit POI' : 'Add POI'}</h3>
         <form onSubmit={handleSubmit}>
           <input
             placeholder="Name"
@@ -138,7 +168,20 @@ function App() {
           /><br /><br />
           <input placeholder="Latitude" value={form.lat} readOnly /><br /><br />
           <input placeholder="Longitude" value={form.lng} readOnly /><br /><br />
-          <button type="submit">Save</button>
+
+          <button type="submit">{editingId ? 'Update' : 'Save'}</button>
+          {editingId && (
+            <button
+              type="button"
+              style={{ marginLeft: '10px' }}
+              onClick={() => {
+                setForm({ name: '', description: '', lat: '', lng: '' });
+                setEditingId(null);
+              }}
+            >
+              Cancel
+            </button>
+          )}
         </form>
 
         <hr />
@@ -161,6 +204,7 @@ function App() {
                 <td>{poi.lat}</td>
                 <td>{poi.lng}</td>
                 <td>
+                  <button onClick={() => handleEdit(poi.id)}>Edit</button>{' '}
                   <button onClick={() => handleDelete(poi.id)}>Delete</button>
                 </td>
               </tr>
