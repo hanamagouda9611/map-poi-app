@@ -1,0 +1,10 @@
+
+
+CREATE TABLE pois (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT,
+  location GEOMETRY(Point, 4326) NOT NULL
+);
+
+CREATE EXTENSION IF NOT EXISTS postgis;
