@@ -16,13 +16,13 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 
-const API_URL = 'http://localhost:5000/api/pois'; // Update if using another IP
+const API_URL = 'http://localhost:5000/api/pois';
 
 function LocationMarker({ onMapClick }) {
   useMapEvents({
     click(e) {
       onMapClick(e.latlng);
-    },
+    }
   });
   return null;
 }
@@ -30,21 +30,10 @@ function LocationMarker({ onMapClick }) {
 function App() {
   const [pois, setPois] = useState([]);
   const [form, setForm] = useState({ name: '', description: '', lat: '', lng: '' });
-  const [message, setMessage] = useState('');
-  const [editingId, setEditingId] = useState(null);
+  const [message, setMessage] = useState([]);
 
+  // Load POIs from server
   useEffect(() => {
-    loadPOIs();
-  }, []);
-
-  useEffect(() => {
-    if (message) {
-      const timer = setTimeout(() => setMessage(''), 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [message]);
-
-  const loadPOIs = () => {
     fetch(API_URL)
       .then(res => res.json())
       .then(setPois)
@@ -52,39 +41,37 @@ function App() {
         console.error("Failed to load POIs:", err);
         setMessage('❌ Failed to load POIs from server');
       });
+  }, []);
+
+  // Auto-clear messages after 4 seconds
+  useEffect(() => {
+    if (message) {
+      const timer = setTimeout(() => setMessage(''), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [message]);
+
+  // Handle map click to set lat/lng
+  const handleMapClick = (latlng) => {
+    setForm({ ...form, lat: latlng.lat, lng: latlng.lng });
   };
 
-  const handleMapClick = ({ lat, lng }) => {
-    setForm({ ...form, lat: lat.toFixed(6), lng: lng.toFixed(6) });
-  };
-
+  // Submit POI
   const handleSubmit = (e) => {
     e.preventDefault();
-
-    const method = editingId ? 'PUT' : 'POST';
-    const url = editingId ? `${API_URL}/${editingId}` : API_URL;
-
-    const payload = {
-      name: form.name,
-      description: form.description,
-      lat: parseFloat(form.lat),
-      lng: parseFloat(form.lng),
-    };
-
-    fetch(url, {
-      method,
+    fetch(API_URL, {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(form)
     })
       .then(res => {
         if (!res.ok) throw new Error('Failed to save POI');
         return res.json();
       })
       .then(() => {
-        setMessage(`✅ POI ${editingId ? 'updated' : 'created'} successfully!`);
         setForm({ name: '', description: '', lat: '', lng: '' });
-        setEditingId(null);
-        loadPOIs();
+        setMessage('✅ POI saved successfully!');
+        return fetch(API_URL).then(res => res.json()).then(setPois);
       })
       .catch(err => {
         console.error(err);
@@ -92,33 +79,12 @@ function App() {
       });
   };
 
-  const handleEdit = (id) => {
-    fetch(`${API_URL}/${id}`)
-      .then(res => {
-        if (!res.ok) throw new Error(`POI with ID ${id} not found`);
-        return res.json();
-      })
-      .then(data => {
-        setForm({
-          name: data.name,
-          description: data.description,
-          lat: data.lat,
-          lng: data.lng,
-        });
-        setEditingId(id);
-      })
-      .catch(err => {
-        console.error('Edit fetch error:', err);
-        setMessage('❌ Failed to load POI for editing');
-      });
-  };
-
+  // Delete POI
   const handleDelete = (id) => {
     fetch(`${API_URL}/${id}`, { method: 'DELETE' })
       .then(res => {
         if (!res.ok) throw new Error('Failed to delete POI');
-        setMessage('🗑️ POI deleted');
-        loadPOIs();
+        return fetch(API_URL).then(res => res.json()).then(setPois);
       })
       .catch(err => {
         console.error(err);
@@ -136,12 +102,12 @@ function App() {
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 1000,
-            background: '#333',
+            background: 'rgba(0, 0, 0, 0.75)',
             color: '#fff',
             padding: '12px 20px',
             borderRadius: '8px',
             fontSize: '15px',
-            boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
+            boxShadow: '0px 2px 10px rgba(0,0,0,0.3)'
           }}>
             {message}
           </div>
@@ -150,13 +116,13 @@ function App() {
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
           <LocationMarker onMapClick={handleMapClick} />
           {pois.map(poi => (
-            <Marker key={poi.id} position={[parseFloat(poi.lat), parseFloat(poi.lng)]} />
+            <Marker key={poi.id} position={[poi.lat, poi.lng]} />
           ))}
         </MapContainer>
       </div>
 
       <div style={{ width: '30%', padding: '20px' }}>
-        <h3>{editingId ? 'Edit POI' : 'Add POI'}</h3>
+        <h3>Add POI</h3>
         <form onSubmit={handleSubmit}>
           <input
             placeholder="Name"
@@ -172,20 +138,7 @@ function App() {
           /><br /><br />
           <input placeholder="Latitude" value={form.lat} readOnly /><br /><br />
           <input placeholder="Longitude" value={form.lng} readOnly /><br /><br />
-
-          <button type="submit">{editingId ? 'Update' : 'Save'}</button>
-          {editingId && (
-            <button
-              type="button"
-              style={{ marginLeft: '10px' }}
-              onClick={() => {
-                setForm({ name: '', description: '', lat: '', lng: '' });
-                setEditingId(null);
-              }}
-            >
-              Cancel
-            </button>
-          )}
+          <button type="submit">Save</button>
         </form>
 
         <hr />
@@ -205,10 +158,9 @@ function App() {
               <tr key={poi.id}>
                 <td>{poi.name}</td>
                 <td>{poi.description}</td>
-                <td>{parseFloat(poi.lat).toFixed(6)}</td>
-                <td>{parseFloat(poi.lng).toFixed(6)}</td>
+                <td>{poi.lat}</td>
+                <td>{poi.lng}</td>
                 <td>
-                  <button onClick={() => handleEdit(poi.id)}>Edit</button>{' '}
                   <button onClick={() => handleDelete(poi.id)}>Delete</button>
                 </td>
               </tr>
