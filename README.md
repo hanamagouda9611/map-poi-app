@@ -7,11 +7,11 @@ This project is a full-stack web application that allows users to create, view, 
 ## 🔧 Tech Stack
 
 *Frontend*:
-1.React.js (for dynamic UI)
-Leaflet.js or Mapbox GL JS (for interactive maps)
+React.js (for dynamic UI),Leaflet.js or Mapbox GL JS (for interactive maps)
 
 *Backend*:
-Node.js with Express.js (API server)
+Node.js with Express.js
+OR Python FastAPI
 
 *Database*:
 PostgreSQL with PostGIS (for geographic data support)
@@ -22,11 +22,15 @@ PostgreSQL with PostGIS (for geographic data support)
 ```
 map-poi-app/
 │
-├── backend/ # Node.js Express API
-│ └── server.js # Server logic
-│
-├── frontend/ # React app
-│ ├── public/
+├── map-poin-backend/   # Node.js Express API
+│ └── server.js   # Server logic
+|
+│├── map-poi-backend-py/    # Python FastAPI API
+│   └── main.py  
+|   └── requirements.txt   # Install dependencies:
+|
+├── map-poi-frontend/ # React app
+│ ├── public/ 
 │ └── src/
 │ └── App.js # Map & POI logic
 │ |__ README.md
@@ -36,9 +40,13 @@ map-poi-app/
 
 ## ⚙️ Prerequisites
 
-- Node.js & npm
-- PostgreSQL (with PostGIS enabled)
-- Internet access (for map tiles from OpenStreetMap)
+Node.js & npm
+
+Python 3.8+ (for FastAPI backend)
+
+PostgreSQL with PostGIS enabled
+
+Internet access (for map tiles)
 
 ---
 
@@ -60,12 +68,29 @@ CREATE TABLE pois (
 ```
 
 ### 2️⃣ Backend Setup
+Option A: Node.js Backend
 ```
 mkdir map-poi-backend && cd map-poi-backend
 npm init -y
 npm install express cors pg   # Create server.js and paste backend code
+```
 
+Start the server:
+```
 node server.js
+```
+
+Option B: Python FastAPI Backend
+
+Create folder & Install dependencies:
+```
+mkdir map-poi-backend-py && cd map-poi-backend-py
+pip install -r requirements.txt
+```
+
+Start the server:
+```
+uvicorn main:app --host 0.0.0.0 --port 5000 --reload
 ```
 
 ### 3️⃣ Frontend Setupt
@@ -78,10 +103,13 @@ npm start
 ```
 
 🖱️ Features
-🗺️ Click on map to select coordinates
+🗺️ Interactive map (Leaflet + OpenStreetMap)
 
 ➕ Add POIs with name and description
 
-🗑️ Delete POIs directly from map popups
+📍 Coordinates stored as PostGIS geometry types
 
-📍 Coordinates are stored using real spatial types (geometry in PostGIS)
+✏️ Edit POIs (if implemented)
+
+🗑️ Delete POIs via map popups
+
