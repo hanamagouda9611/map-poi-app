@@ -6,7 +6,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 🔧 Update DB config as per your setup
+//----------- Update DB config as per your setup ---------------------
 const pool = new Pool({
   user: 'postgres',
   host: 'localhost',
@@ -15,7 +15,7 @@ const pool = new Pool({
   port: 7051,
 });
 
-// ✅ Get all POIs
+//----------- Get all POIs ---------------------
 app.get('/api/pois', async (req, res) => {
   try {
     const result = await pool.query(`
@@ -31,7 +31,7 @@ app.get('/api/pois', async (req, res) => {
   }
 });
 
-// ✅ Create POI (Corrected!)
+// ----------- Create POI (Corrected!) -----------------
 app.post('/api/pois', async (req, res) => {
   const { name, description, lat, lng } = req.body;
 
@@ -52,7 +52,7 @@ app.post('/api/pois', async (req, res) => {
   }
 });
 
-// ✅ Get POI by ID
+// ----------------- Get POI by ID ---------------------
 app.get('/api/pois/:id', async (req, res) => {
   const id = parseInt(req.params.id);
 
@@ -76,7 +76,7 @@ app.get('/api/pois/:id', async (req, res) => {
   }
 });
 
-// ✅ Update POI
+// --------------- Update POI -------------------
 app.put('/api/pois/:id', async (req, res) => {
   const id = parseInt(req.params.id);
   const { name, description, lat, lng } = req.body;
@@ -105,7 +105,7 @@ app.put('/api/pois/:id', async (req, res) => {
   }
 });
 
-// ✅ Delete POI
+// --------------- Delete POI ------------------
 app.delete('/api/pois/:id', async (req, res) => {
   try {
     await pool.query(`DELETE FROM pois WHERE id = $1`, [req.params.id]);
@@ -116,7 +116,7 @@ app.delete('/api/pois/:id', async (req, res) => {
   }
 });
 
-// ✅ Start server
+// ------------------- Start server -------------------
 app.listen(5000, () => {
   console.log('✅ Server running on http://localhost:5000');
 });
