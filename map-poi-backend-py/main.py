@@ -5,7 +5,7 @@ import psycopg2
 
 app = FastAPI()
 
-# CORS 
+# ---------------- CORS --------------
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -14,7 +14,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# PostgreSQL connection
+# ---------- PostgreSQL connection ------------------
 conn = psycopg2.connect(
     host="localhost",
     port=7051,
@@ -24,14 +24,14 @@ conn = psycopg2.connect(
 )
 conn.autocommit = True
 
-# Schema
+# ------------ Schema --------------
 class POI(BaseModel):
     name: str
     description: str
     lat: float
     lng: float
 
-# Get all POIs
+# ---------------- Get all POIs ----------------
 @app.get("/api/pois")
 def get_pois():
     with conn.cursor() as cur:
@@ -50,7 +50,7 @@ def get_pois():
             } for row in cur.fetchall()
         ]
 
-# Create a POI
+# ------------------ Create a POI ----------------------
 @app.post("/api/pois", status_code=201)
 def create_poi(poi: POI):
     with conn.cursor() as cur:
@@ -60,7 +60,7 @@ def create_poi(poi: POI):
         """, (poi.name, poi.description, poi.lng, poi.lat))
     return {"success": True}
 
-# Delete POI by ID
+# -------------------- Delete POI by ID -------------------------
 @app.delete("/api/pois/{id}", status_code=204)
 def delete_poi(id: int):
     with conn.cursor() as cur:
